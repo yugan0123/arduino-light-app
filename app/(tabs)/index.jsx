@@ -1,4 +1,4 @@
-import { Image, StyleSheet, Alert,Platform,View,Text,StatusBar,Pressable,NativeModules,NativeEventEmitter,PermissionsAndroid } from 'react-native';
+import {  StyleSheet, Alert,Platform,View,Text,StatusBar,Pressable,NativeModules,NativeEventEmitter,PermissionsAndroid } from 'react-native';
 import { useState,useEffect } from 'react';
 import ToggleSwitch from 'toggle-switch-react-native';
 import RNBluetoothClassic from 'react-native-bluetooth-classic';
@@ -13,6 +13,8 @@ export default function HomeScreen() {
 
   const [connectedDeviceid, setConnectedDeviceid] = useState(null);
   const [connectedDevice,setConnectedDevice] = useState(null);
+  const [statuscolor,setstatuscolor] = useState("red");
+  const [connectionstatus,setIsConnected] = useState(false);
 
   const requestPermissions = async () => {
     if (Platform.OS === 'android') {
@@ -42,8 +44,20 @@ export default function HomeScreen() {
         if(enabled){
           const devices = await RNBluetoothClassic.startDiscovery()
           if(devices !== "" || devices !== "undefined" || devices !== null){
-            connectTodevice(devices[0].id);
-            setConnectedDeviceid(devices[0].id);
+            if(devices.length > 1){
+              for(var i=0;i<devices.length;i++){
+                if(devices[i].id === "00:23:10:A0:51:88"){
+                  console.log("inside the for loop")
+                  connectTodevice(devices[i].id);
+                  setConnectedDeviceid(devices[i].id);
+                }
+              }
+            }
+            if(devices[0].id === "00:23:10:A0:51:88"){
+              connectTodevice(devices[0].id);
+              setConnectedDeviceid(devices[0].id);
+            }
+            
             
           }
 
@@ -56,13 +70,51 @@ export default function HomeScreen() {
     initBluetooth();
   }, []);
 
+  useEffect(() => {
+    const checkConnectionStatus = async () => {
+      if (connectedDevice) {
+        const connectionStatus = await connectedDevice.isConnected();
+        setIsConnected(connectionStatus);
+
+        if (!connectionStatus) {
+          Alert.alert('Disconnected', 'The Bluetooth device has been disconnected');
+          setConnectedDevice(null);
+          setstatuscolor("red");
+        }
+      }
+    };
+
+    const intervalId = setInterval(checkConnectionStatus, 5000); // Check every 5 seconds
+
+    return () => clearInterval(intervalId); // Cleanup on unmount
+  }, [connectedDevice]);
+
   const connectTodevice = async (deviceid) => {
     console.log("inside connect to device ",deviceid);
     const connection = await RNBluetoothClassic.connectToDevice(deviceid);
     console.log("Bluetooth device connected successfully");
+    setstatuscolor("green")
     setConnectedDevice(connection);
     connection.onDataReceived((e) => {
       console.log("inside the connect to device: ",e.data);
+      if(e.data === "HIGH2"){
+        setcolor1("yellow");
+      }else if(e.data === "LOW2"){
+        setcolor1("white");
+      }else if(e.data==="HIGH3"){
+        setcolor2("yellow");
+      }else if(e.data==="LOW3"){
+        setcolor2("white");
+      }else if(e.data==="HIGH4"){
+        setcolor3("yellow");
+      }else if(e.data==="LOW4"){
+        setcolor3("white");
+      }else if(e.data==="HIGH5"){
+        setcolor4("yellow");
+      }else if(e.data==="LOW5"){
+        setcolor4("white");
+      }
+
     })
   }
 
@@ -79,11 +131,23 @@ export default function HomeScreen() {
           setcolor2("white");
         }else if(data==="ON3"||data==="OFF3"){
           setcolor3("white");
+        }else if(data==="ON4"||data==="OFF4"){
+          setcolor4("white");
         }
       }
 
     }catch(err){
-      console.log(err);
+      console.log("error is ",err);
+      Alert.alert("Error","Check if bluetooth is connected or not");
+      if(data==="ON1"||data==="OFF1"){
+        setcolor1("white");
+      }else if(data==="ON2"||data==="OFF2"){
+        setcolor2("white");
+      }else if(data==="ON3"||data==="OFF3"){
+        setcolor3("white");
+      }else if(data==="ON4"||data==="OFF4"){
+        setcolor4("white");
+      }
     }
   }
 
@@ -108,22 +172,29 @@ export default function HomeScreen() {
         onToggle={isOn => console.log("changed to : ", isOn)}
       /> */}
 
-      <View style={[styles.controlsection]}> 
+      <View style={[styles.controlsection,{marginTop:50}]}> 
         <Pressable style={[styles.pressablecomponent,{backgroundColor:color1}]} onPress={() => {setcolor1(color1==="white"?"yellow":"white");sendData(color1==="white"?"ON1":"OFF1")}}>
           <Text>L1</Text>
         </Pressable>
         <Pressable style={[styles.pressablecomponent,{backgroundColor:color2}]} onPress={() => {setcolor2(color2==="white"?"yellow":"white");sendData(color2==="white"?"ON2":"OFF2")}}>
           <Text>L2</Text>
         </Pressable>
+        </View>
+        <View style={[styles.controlsection]}>
         <Pressable style={[styles.pressablecomponent,{backgroundColor:color3}]} onPress={() => {setcolor3(color3==="white"?"yellow":"white");sendData(color3==="white"?"ON3":"OFF3")}}>
           <Text>L3</Text>
         </Pressable>
-        <Pressable style={[styles.pressablecomponent,{backgroundColor:color4}]} onPress={() => setcolor4(color4==="white"?"yellow":"white")}>
+        <Pressable style={[styles.pressablecomponent,{backgroundColor:color4}]} onPress={() => {setcolor4(color4==="white"?"yellow":"white");sendData(color4==="white"?"ON4":"OFF4")}}>
           <Text>F1</Text>
         </Pressable>
         {/* <Pressable >
           <Text>Start Scan</Text>
         </Pressable> */}
+      </View>
+      <View style={{width:'100%',display:'flex',justifyContent:'center',alignItems:'center'}}>
+          <View style={{backgroundColor:statuscolor,height:30,width:30,borderRadius:36}}>
+            
+          </View>
       </View>
       <StatusBar backgroundColor={'black'} />
     </View>
@@ -143,7 +214,8 @@ const styles = StyleSheet.create({
     display:'flex',
     justifyContent:'center',
     alignItems:'center',
-    marginTop: 50
+    flexDirection:'row',
+    gap:50
   },
   pressablecomponent: {
     height:70,
