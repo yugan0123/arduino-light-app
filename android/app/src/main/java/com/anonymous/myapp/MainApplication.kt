@@ -1,7 +1,5 @@
 package com.anonymous.myapp
 
-package com.mybluetoothapp
-
 import android.app.Application
 import android.content.res.Configuration
 
@@ -16,7 +14,6 @@ import com.facebook.soloader.SoLoader
 
 import expo.modules.ApplicationLifecycleDispatcher
 import expo.modules.ReactNativeHostWrapper
-import com.mybluetoothapp.BluetoothModule
 
 class MainApplication : Application(), ReactApplication {
 
@@ -26,7 +23,6 @@ class MainApplication : Application(), ReactApplication {
           override fun getPackages(): List<ReactPackage> {
             // Packages that cannot be autolinked yet can be added manually here, for example:
             // packages.add(new MyReactNativePackage());
-            packages.add(new BluetoothModule())
             return PackageList(this).packages
           }
 
