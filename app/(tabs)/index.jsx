@@ -1,10 +1,30 @@
-import {  StyleSheet, Alert,Platform,View,Text,StatusBar,Pressable,NativeModules,NativeEventEmitter,PermissionsAndroid } from 'react-native';
+import {  StyleSheet, Alert,Platform,View,Text,StatusBar,ToastAndroid,Pressable,NativeModules,NativeEventEmitter,PermissionsAndroid } from 'react-native';
 import { useState,useEffect } from 'react';
 import ToggleSwitch from 'toggle-switch-react-native';
-import RNBluetoothClassic from 'react-native-bluetooth-classic';
+import RNBluetoothClassic,{BluetoothEventType} from 'react-native-bluetooth-classic';
 import {request,PERMISSIONS,RESULTS} from 'react-native-permissions';
 
+const { BluetoothModule } = NativeModules;
+
 export default function HomeScreen() {
+
+  // BluetoothModule.enableBluetooth();
+
+  useEffect(() => {
+    RNBluetoothClassic.onBluetoothEnabled(() => {
+      console.log("Bluetooth is enabled");
+      initBluetooth();
+    });
+
+    RNBluetoothClassic.onBluetoothDisabled(() => {
+      setstatuscolor("red");
+      console.log("Bluetooth is Disabled");
+      Alert.alert("Bluetooth is not enabled","Please turn on your bluetooth device");
+    });
+  },[])
+  
+
+  
 
   const [color1,setcolor1] = useState("white")
   const [color2,setcolor2] = useState("white")
@@ -36,10 +56,12 @@ export default function HomeScreen() {
     return true;
   };
 
-  useEffect(() => {
     const initBluetooth = async () => {
       try {
 
+        const bleenabled = await RNBluetoothClassic.isBluetoothEnabled();
+        console.log(bleenabled);
+        
         const enabled = await requestPermissions();
         if(enabled){
           const devices = await RNBluetoothClassic.startDiscovery()
@@ -57,18 +79,55 @@ export default function HomeScreen() {
               connectTodevice(devices[0].id);
               setConnectedDeviceid(devices[0].id);
             }
-            
-            
           }
-
         }
       } catch (err) {
-        console.error('Bluetooth initialization error:', err);
+        console.error(err.message);
+        // Alert.alert("Bluetooth not enabled","Please turn on the bluetooth")
+        // initBluetooth();
+        if(err.message === "Bluetooth mAdapter is not enabled"){
+          Alert.alert("Bluetooth not enabled","Please turn on your bluetooth");
+        }
       }
     };
 
-    initBluetooth();
-  }, []);
+    useEffect(() => {
+      const initBluetooth = async () => {
+        try {
+  
+          const bleenabled = await RNBluetoothClassic.isBluetoothEnabled();
+          console.log(bleenabled);
+          
+          const enabled = await requestPermissions();
+          if(enabled){
+            const devices = await RNBluetoothClassic.startDiscovery()
+            if(devices !== "" || devices !== "undefined" || devices !== null){
+              if(devices.length > 1){
+                for(var i=0;i<devices.length;i++){
+                  if(devices[i].id === "00:23:10:A0:51:88"){
+                    console.log("inside the for loop")
+                    connectTodevice(devices[i].id);
+                    setConnectedDeviceid(devices[i].id);
+                  }
+                }
+              }
+              if(devices[0].id === "00:23:10:A0:51:88"){
+                connectTodevice(devices[0].id);
+                setConnectedDeviceid(devices[0].id);
+              }
+            }
+          }
+        } catch (err) {
+          console.error(err.message);
+          // Alert.alert("Bluetooth not enabled","Please turn on the bluetooth")
+          // initBluetooth();
+          if(err.message === "Bluetooth mAdapter is not enabled"){
+            Alert.alert("Bluetooth not enabled","Please turn on your bluetooth");
+          }
+        }
+      };
+      initBluetooth();
+    },[])
 
   useEffect(() => {
     const checkConnectionStatus = async () => {
@@ -90,9 +149,9 @@ export default function HomeScreen() {
   }, [connectedDevice]);
 
   const connectTodevice = async (deviceid) => {
-    console.log("inside connect to device ",deviceid);
+    ToastAndroid.show("Connecting to "+deviceid+"",ToastAndroid.LONG);
     const connection = await RNBluetoothClassic.connectToDevice(deviceid);
-    console.log("Bluetooth device connected successfully");
+    ToastAndroid.show("Connected to "+deviceid+" successfully",ToastAndroid.LONG);
     setstatuscolor("green")
     setConnectedDevice(connection);
     connection.onDataReceived((e) => {
